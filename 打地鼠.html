@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>聖公會德田李兆強小學 - 2026打地鼠</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap');
+body { font-family: 'Noto Sans TC', system-ui, sans-serif; }
+
+.grid-cell {
+aspect-ratio: 1;
+transition: all 0.3s ease;
+}
+</style>
+</head>
+<body class="bg-gradient-to-b from-blue-100 to-emerald-100 min-h-screen p-4">
+<div class="max-w-4xl mx-auto bg-white rounded-3xl shadow-2xl p-8">
+<!-- 標題 -->
+<div class="text-center mb-8">
+<div class="text-2xl font-bold text-blue-800">聖公會德田李兆強小學</div>
+<h1 class="text-5xl font-bold text-emerald-700">2026年日期和星期</h1>
+</div>
+
+<!-- 資訊列 -->
+<div class="flex justify-between items-center mb-8">
+<div class="text-2xl">分數：<span id="score" class="font-bold text-amber-600">0</span></div>
+<div class="text-center">
+<div id="timer" class="font-mono text-6xl font-bold text-emerald-600">60</div>
+<div class="text-sm text-gray-500">秒</div>
+</div>
+<button onclick="startGame()"
+class="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-4 rounded-2xl text-xl font-bold">
+開始遊戲
+</button>
+</div>
+
+<!-- 題目 -->
+<div id="question" class="bg-amber-100 border-4 border-amber-300 rounded-2xl p-6 text-center text-3xl font-bold min-h-[120px] mb-8 flex items-center justify-center">
+點擊「開始遊戲」開始！
+</div>
+
+<!-- 六宮格 -->
+<div id="grid" class="grid grid-cols-3 gap-6 mb-8"></div>
+
+<!-- 提示文字 -->
+<div class="text-center text-sm text-gray-500">答對 +10分　答錯暫停3秒</div>
+</div>
+
+<script>
+const weekdays = ["星期日","星期一","星期二","星期三","星期四","星期五","星期六"];
+let score = 0, timeLeft = 60, timerInterval, currentCorrect, isPaused = false, gameStarted = false;
+
+function rand(min, max) {
+return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function generateQuestion() {
+const isWeekday = Math.random() > 0.5;
+const month = rand(1,12);
+let q = "", correct = "";
+
+if (isWeekday) {
+const day = rand(1, new Date(2026, month, 0).getDate());
+const dt = new Date(2026, month-1, day);
+correct = weekdays[dt.getDay()];
+q = `2026年${month}月${day}日是星期幾？`;
+} else {
+const target = rand(0,6);
+const first = new Date(2026, month-1, 1).getDay();
+const add = (target - first + 7) % 7;
+const dateNum = 1 + add;
+correct = `${month}月${dateNum}日`;
+q = `2026年${month}月第一個${weekdays[target]}是幾月幾日？`;
+}
+
+// 生成6個答案（1個正確 + 5個錯誤）
+let answers = [];
+while (answers.length < 5) {
+if (isWeekday) {
+const wrongDay = weekdays[rand(0,6)];
+if (wrongDay !== correct) answers.push(wrongDay);
+} else {
+const wrongDate = `${month}月${rand(1,28)}日`;
+if (wrongDate !== correct) answers.push(wrongDate);
+}
+}
+// 隨機插入正確答案
+answers.splice(rand(0,5), 0, correct);
+
+return {text: q, correct: correct, answers: answers};
+}
+
+function renderGrid(answers) {
+const grid = document.getElementById("grid");
+grid.innerHTML = "";
+answers.forEach(ans => {
+const div = document.createElement("div");
+div.className = `grid-cell bg-gradient-to-br from-amber-400 to-orange-500 rounded-3xl shadow-xl flex flex-col items-center justify-center text-white text-2xl font-bold cursor-pointer hover:scale-105 active:scale-95 border-8 border-white`;
+div.innerHTML = `
+<div class="text-6xl mb-3">🐭</div>
+<div>${ans}</div>
+`;
+div.onclick = () => handleClick(ans);
+grid.appendChild(div);
+});
+}
+
+function handleClick(selected) {
+if (isPaused || !gameStarted) return;
+
+if (selected === currentCorrect) {
+// 答對
+score += 10;
+document.getElementById("score").textContent = score;
+
+// 生成新題目
+const q = generateQuestion();
+currentCorrect = q.correct;
+document.getElementById("question").textContent = q.text;
+renderGrid(q.answers);
+} else {
+// 答錯
+isPaused = true;
+alert(`答錯了！\n正確答案是：${currentCorrect}`);
+setTimeout(() => { isPaused = false; }, 3000);
+}
+}
+
+function startTimer() {
+if (timerInterval) clearInterval(timerInterval);
+timeLeft = 60;
+document.getElementById("timer").textContent = 60;
+document.getElementById("timer").classList.remove("text-red-600");
+
+timerInterval = setInterval(() => {
+if (isPaused) return;
+timeLeft--;
+document.getElementById("timer").textContent = timeLeft;
+
+if (timeLeft <= 10) {
+document.getElementById("timer").classList.add("text-red-600");
+}
+if (timeLeft <= 0) endGame();
+}, 1000);
+}
+
+function startGame() {
+gameStarted = true;
+score = 0;
+document.getElementById("score").textContent = "0";
+
+const q = generateQuestion();
+currentCorrect = q.correct;
+document.getElementById("question").textContent = q.text;
+renderGrid(q.answers);
+startTimer();
+}
+
+function endGame() {
+clearInterval(timerInterval);
+document.getElementById("question").innerHTML = `
+<div class="text-center py-8">
+<div class="text-4xl font-bold text-amber-600 mb-4">時間到！</div>
+<div class="text-6xl font-bold text-emerald-700">最終分數：${score}</div>
+<button onclick="location.reload()"
+class="mt-10 bg-emerald-600 hover:bg-emerald-700 text-white px-12 py-5 rounded-3xl text-2xl font-bold">
+再玩一次
+</button>
+</div>`;
+document.getElementById("grid").innerHTML = "";
+}
+
+// 頁面載入完成
+window.onload = () => {
+console.log("✅ 2026年日期和星期打地鼠（六宮格版）已準備好！");
+};
+</script>
+</body>
+</html>
